@@ -125,3 +125,79 @@ The response always contains the full task object with both conversions. Match `
 1. Call `POST /MusicAI` → save `task_id`, `conversion_id_1`, `conversion_id_2`
 2. Poll `GET /byId` every 5s (max 120s) until `status` is `COMPLETED`, `ERROR`, or `FAILED`
 3. On `COMPLETED`, match your `conversion_id` to `conversion_id_1` or `conversion_id_2` in the response, then download from the corresponding `conversion_path_1` or `conversion_path_2`
+
+
+## Inpaint
+
+**`POST /inpaint`**
+
+Replaces a time-ranged section of an existing audio file with AI-generated content. Submitted as `multipart/form-data` (not JSON). Returns a job immediately; poll `GET /byId` with `conversionType=INPAINT` for results.
+
+### Request (multipart/form-data)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `audio_url` | string | yes | Public URL of the source audio file to modify |
+| `prompt` | string | yes | Description of what to generate in the replaced section |
+| `replace_start_at` | float | yes | Start of the region to replace (seconds) |
+| `replace_end_at` | float | yes | End of the region to replace (seconds) |
+| `lyrics` | string | no | Full lyrics of the original song |
+| `lyrics_section_to_replace` | string | no | New lyrics for the replaced section |
+| `gender` | string | no | Vocalist gender override (`male` / `female`) |
+| `num_outputs` | int | no | Number of output variants to generate (default: `1`, max: `2`) |
+| `webhook_url` | string | no | URL to POST results to when complete |
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Inpaint request submitted successfully",
+  "task_id": "task-xyz-123",
+  "conversion_id_1": "inpaint-abc",
+  "conversion_id_2": "inpaint-def",
+  "eta": 40,
+  "credit_estimate": 45
+}
+```
+
+| Field | Description |
+|---|---|
+| `task_id` | Use this to poll status |
+| `conversion_id_1` / `conversion_id_2` | Individual conversion IDs — poll each separately |
+| `eta` | Estimated processing time in seconds |
+| `credit_estimate` | Estimated credit cost |
+
+### Polling
+
+Poll `GET /byId` with `conversionType=INPAINT` (same flow as music generation):
+
+```
+GET /byId?conversionType=INPAINT&task_id=<task_id>&conversion_id=<conversion_id>
+```
+
+The response shape is identical to the music generation poll response — match `conversion_id_1` / `conversion_id_2` to get the correct `conversion_path_N`.
+
+### Example
+
+```python
+import requests
+
+url = "https://api.musicgpt.com/api/public/v1/inpaint"
+headers = {"Authorization": "<API_KEY>"}
+
+data = {
+    "audio_url": "https://mybucket.s3.amazonaws.com/song.mp3",
+    "prompt": "Add a soft guitar solo here",
+    "replace_start_at": 12.5,
+    "replace_end_at": 20.0,
+    "lyrics": "This is where my story begins",
+    "lyrics_section_to_replace": "New lyrics",
+    "gender": "male",
+    "num_outputs": 1,
+}
+
+response = requests.post(url, headers=headers, data=data)
+result = response.json()
+# result["task_id"], result["conversion_id_1"], result["conversion_id_2"]
+```

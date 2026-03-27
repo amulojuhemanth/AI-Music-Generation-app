@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 import httpx
-from models.music_model import MusicCreate
+from models.music_model import MusicCreate, InpaintCreate
 from supabase_client import supabase
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ MUSICGPT_API_KEY = os.environ.get("MUSICGPT_API_KEY")
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "music-generated")
 
 POLL_INTERVAL_SECONDS = 5
-MAX_POLL_DURATION_SECONDS = 120
+MAX_POLL_DURATION_SECONDS = 300
 TERMINAL_STATUSES = {"COMPLETED", "ERROR", "FAILED"}
 
 
@@ -76,11 +76,79 @@ class MusicService:
         return db_response.data
 
     @staticmethod
-    async def poll_and_store(task_id: str, conversion_id: str, project_id: str):
-        logger.info("Polling started: task_id=%s conversion_id=%s", task_id, conversion_id)
+    async def inpaint_music(data: InpaintCreate) -> list[dict]:
+        # Fetch the source record to copy project/user metadata
+        source_resp = supabase.table("music_metadata").select("*").eq("id", data.id).single().execute()
+        source = source_resp.data
+        if not source:
+            raise ValueError(f"music_metadata row not found: id={data.id}")
+
+        payload = {
+            "prompt": data.prompt,
+            "replace_start_at": data.replace_start_at,
+            "replace_end_at": data.replace_end_at,
+            "audio_url": data.audio_url,
+            "num_outputs": data.num_outputs,
+        }
+        if data.lyrics:
+            payload["lyrics"] = data.lyrics
+        if data.lyrics_section_to_replace:
+            payload["lyrics_section_to_replace"] = data.lyrics_section_to_replace
+        if data.gender:
+            payload["gender"] = data.gender
+
+        headers = {"Authorization": MUSICGPT_API_KEY}
+
+        logger.info(
+            "Calling MusicGPT /inpaint: source_id=%s replace=%.1f-%.1fs",
+            data.id, data.replace_start_at, data.replace_end_at,
+        )
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            response = await client.post(
+                f"{MUSICGPT_BASE_URL}/inpaint",
+                headers=headers,
+                data=payload,  # multipart/form-data per API spec
+            )
+        response.raise_for_status()
+        result = response.json()
+        logger.info(
+            "MusicGPT inpaint job queued: task_id=%s conversion_id_1=%s conversion_id_2=%s eta=%ss",
+            result["task_id"], result["conversion_id_1"], result["conversion_id_2"], result.get("eta"),
+        )
+
+        base_record = {
+            "project_id": source["project_id"],
+            "user_name": source["user_name"],
+            "user_email": source["user_email"],
+            "type": source["type"],
+            "task_id": result["task_id"],
+            "status": "IN_QUEUE",
+            "prompt": data.prompt,
+            "music_style": source.get("music_style"),
+            "is_cloned": data.id,  # reference back to the source row
+        }
+
+        records = [{**base_record, "conversion_id": result["conversion_id_1"]}]
+        conv_id_2 = result.get("conversion_id_2", "")
+        if data.num_outputs > 1 and conv_id_2 and conv_id_2 != "single_song_generation_request":
+            records.append({**base_record, "conversion_id": conv_id_2})
+
+        db_response = supabase.table("music_metadata").insert(records).execute()
+        logger.info(
+            "Inserted %d inpaint music_metadata rows for task_id=%s (num_outputs=%d)",
+            len(db_response.data), result["task_id"], data.num_outputs,
+        )
+        return db_response.data
+
+    @staticmethod
+    async def poll_and_store(task_id: str, conversion_id: str, project_id: str, conversion_type: str = "MUSIC_AI"):
+        logger.info(
+            "Polling started: task_id=%s conversion_id=%s conversion_type=%s",
+            task_id, conversion_id, conversion_type,
+        )
         headers = {"Authorization": MUSICGPT_API_KEY}
         params = {
-            "conversionType": "MUSIC_AI",
+            "conversionType": conversion_type,
             "task_id": task_id,
             "conversion_id": conversion_id,
         }

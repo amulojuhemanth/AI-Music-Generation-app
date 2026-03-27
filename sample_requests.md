@@ -1,6 +1,6 @@
 # Sample Request Bodies — Music Generation
 
-All requests go to `POST /music/`. Only `project_id`, `user_name`, `user_email`, `type`, and `prompt` are required.
+All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, `user_email`, `type`, and `prompt` are required.
 
 ---
 

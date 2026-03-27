@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/music", tags=["Music"])
 
 
-@router.post("/", response_model=List[MusicResponse])
+@router.post("/generateMusic", response_model=List[MusicResponse])
 async def create_music(music: MusicCreate, background_tasks: BackgroundTasks):
     logger.info(
         "Music generation request: project_id=%s type=%s prompt=%.80s",
