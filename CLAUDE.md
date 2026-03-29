@@ -2,27 +2,98 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+---
 
-**Run the server:**
+## Installation & Setup
+
+### Step 1 — Prerequisites
+
+Install system dependencies before anything else.
+
+**Python 3.12**
 ```bash
+# macOS (Homebrew)
+brew install python@3.12
+
+# Ubuntu/Debian
+sudo apt-get install python3.12 python3.12-venv
+```
+
+**ffmpeg** (required for stem separation audio conversion)
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# Verify
+ffmpeg -version
+```
+
+---
+
+### Step 2 — Clone the repository
+
+```bash
+git clone <repo-url>
+cd AI-Music-Gen
+```
+
+---
+
+### Step 3 — Install Python dependencies
+
+**Option A — uv (recommended)**
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install all dependencies into .venv
+uv sync
+
+# Activate the virtual environment
+source .venv/bin/activate        # Mac/Linux
+# .venv\Scripts\activate         # Windows
+```
+
+**Option B — pip fallback**
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate        # Mac/Linux
+# .venv\Scripts\activate         # Windows
+
+pip install -r requirements.txt
+```
+
+---
+
+### Step 4 — Environment variables
+
+Create a `.env` file in the project root:
+```
+SUPABASE_URL=...
+SUPABASE_KEY=...
+MUSICGPT_API_KEY=...
+BUCKET_NAME=music-generated
+```
+
+---
+
+### Step 5 — Run the server
+
+```bash
+# With uv (no manual activation needed)
+uv run uvicorn main:app --reload
+
+# With activated venv
 uvicorn main:app --reload
 ```
 
-UV run uvicorn main:app
+Server starts at `http://localhost:8000`
+Interactive API docs at `http://localhost:8000/docs`
 
-**Setup with uv (recommended):**
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh   # install uv if not already installed
-uv sync                                             # install deps from pyproject.toml into .venv
-source .venv/bin/activate                           # activate (Mac/Linux)
-# .venv\Scripts\activate                           # activate (Windows)
-```
-
-**Install dependencies (pip fallback):**
-```bash
-pip install -r requirements.txt
-```
+---
 
 ## Folder Structure
 
@@ -38,18 +109,23 @@ AI-Music-Gen/
 ├── sample_requests.md        # Example request bodies for different music styles
 ├── models/
 │   ├── project_model.py      # projectCreate, projectResponse
-│   ├── music_model.py        # MusicCreate, MusicResponse, MusicType enum
-│   └── lyrics_model.py       # LyricsCreate, LyricsResponse
+│   ├── music_model.py        # MusicCreate, InpaintCreate, MusicResponse, MusicType enum
+│   ├── lyrics_model.py       # LyricsCreate, LyricsResponse
+│   └── separation_model.py   # SeparationResponse
 ├── routers/
 │   ├── project_router.py     # POST /projects/, GET /projects/
 │   ├── music_router.py       # POST /music/generateMusic
 │   ├── inpaint_router.py     # POST /inpaint/inpaint
-│   └── lyrics_router.py      # POST /lyrics/generate
+│   ├── lyrics_router.py      # POST /lyrics/generate
+│   └── separation_router.py  # POST /separate/
 └── services/
     ├── project_service.py    # Supabase CRUD for projects table
     ├── music_service.py      # MusicGPT API calls, polling, Supabase Storage upload
-    └── lyrics_service.py     # MusicGPT lyrics generation, Supabase insert
+    ├── lyrics_service.py     # MusicGPT lyrics generation, Supabase insert
+    └── separation_service.py # Demucs stem separation, local cleanup, Supabase Storage upload
 ```
+
+---
 
 ## Architecture
 
@@ -58,21 +134,21 @@ FastAPI backend for an AI music generation app using Supabase (database + file s
 **Request flow:** `main.py` → `routers/` → `services/` → `supabase_client.py`
 
 - `routers/` — HTTP routing only, delegates all logic to services
-- `services/` — business logic as static methods; `music_service.py` also runs async background polling tasks
+- `services/` — business logic as static methods; `music_service.py` runs async background polling tasks; `separation_service.py` runs sync background processing via `BackgroundTasks`
 - `models/` — Pydantic models for request validation and API responses
 - `supabase_client.py` — singleton client shared across all services
 
 **Music generation flow:**
 1. `POST /music/generateMusic` calls MusicGPT `POST /MusicAI`, inserts 2 rows into `music_metadata` (one per `conversion_id`), returns immediately
 2. Two `BackgroundTask`s poll MusicGPT `GET /byId` (`conversionType=MUSIC_AI`) every 5s independently (max 120s before marking `FAILED`)
-3. On `COMPLETED`: downloads MP3, uploads to Supabase Storage at `{BUCKET_NAME}/{project_id}/{task_id}/{conversion_id}.mp3`, updates metadata row with storage URL, title, duration, and generated lyrics
+3. On `COMPLETED`: downloads MP3, uploads to Supabase Storage at `{BUCKET_NAME}/{user_id}/{task_id}/{conversion_id}.mp3`, updates metadata row with storage URL, title, duration, and generated lyrics
 
 **Inpaint flow:**
 1. `POST /inpaint/inpaint` receives `id` (source `music_metadata` UUID) + inpaint params
 2. Fetches the source row to copy `project_id`, `user_name`, `user_email`, `type`
 3. Calls MusicGPT `POST /inpaint` (multipart/form-data), inserts 2 new rows with `is_cloned = <source_id>`, returns immediately
 4. Two `BackgroundTask`s poll MusicGPT `GET /byId` (`conversionType=INPAINT`) every 5s (same timeout as music generation)
-5. On `COMPLETED`: same download + Supabase Storage upload as music generation
+5. On `COMPLETED`: same download + Supabase Storage upload as music generation, stored at `{BUCKET_NAME}/{user_id}/{task_id}/{conversion_id}.mp3`
 
 **Lyrics generation flow:**
 1. `POST /lyrics/generate` receives `user_id`, `user_name`, `prompt`, and optional `style`, `mood`, `theme`, `tone`
@@ -80,13 +156,23 @@ FastAPI backend for an AI music generation app using Supabase (database + file s
 3. Calls MusicGPT `GET /prompt_to_lyrics?prompt=<combined_prompt>` — synchronous, returns lyrics immediately (no polling)
 4. Inserts one row into `lyrics_metadata` with `is_lyrics=True` and generated lyrics stored in the `prompt` column
 
+**Stem separation flow:**
+1. `POST /separate/` receives `user_id`, `project_id`, and an uploaded audio file (multipart/form-data)
+2. Saves the upload to `inputs/`, inserts a `PENDING` row into `audio_separations`, returns immediately
+3. A `BackgroundTask` converts the file to WAV (via ffmpeg if needed), runs `demucs` (`htdemucs` model) — status set to `IN_PROGRESS`
+4. On success: uploads `vocals.wav`, `drums.wav`, `bass.wav`, `other.wav` to Supabase Storage at `{user_id}/{project_id}/{job_id}/{stem}.wav`, updates row with public URLs and `COMPLETED`
+5. On failure: sets status to `FAILED` with `error_message`
+6. Cleanup: always deletes only this job's input file, converted WAV, and demucs output subfolder — `inputs/` and `outputs/` root folders are never removed (safe for concurrent jobs)
+
+---
+
 ## Database
 
 **`projects` table**
 `id` (int), `project_name`, `created_by`, `created_at`, `updated_at`
 
 **`music_metadata` table**
-`id` (UUID), `project_id` (text), `user_name`, `user_email`, `type` (music/vocal/sfx/stem),
+`id` (UUID), `project_id` (text), `user_id` (text), `user_name`, `user_email`, `type` (music/vocal/sfx/stem),
 `task_id`, `conversion_id`, `status` (IN_QUEUE/COMPLETED/ERROR/FAILED),
 `prompt`, `music_style`, `title`, `duration` (float), `audio_url`, `album_cover_path`,
 `generated_lyrics`, `is_cloned` (UUID, nullable — source row id when created via inpaint),
@@ -97,12 +183,7 @@ FastAPI backend for an AI music generation app using Supabase (database + file s
 `is_lyrics` (bool, always `true` for this flow), `style`, `mood`, `theme`, `tone`,
 `created_at`
 
-## Environment
-
-Requires a `.env` file with:
-```
-SUPABASE_URL=...
-SUPABASE_KEY=...
-MUSICGPT_API_KEY=...
-BUCKET_NAME=music-generated
-```
+**`audio_separations` table**
+`id` (UUID), `user_id` (UUID), `project_id` (text), `original_filename` (text),
+`status` (PENDING/IN_PROGRESS/COMPLETED/FAILED), `vocals_url`, `drums_url`, `bass_url`, `other_url`,
+`error_message` (nullable), `created_at`
