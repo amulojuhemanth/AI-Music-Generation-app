@@ -56,6 +56,7 @@ class MusicService:
 
         base_record = {
             "project_id": data.project_id,
+            "user_id": data.user_id,
             "user_name": data.user_name,
             "user_email": data.user_email,
             "type": data.type.value,
@@ -118,6 +119,7 @@ class MusicService:
 
         base_record = {
             "project_id": source["project_id"],
+            "user_id": source["user_id"],
             "user_name": source["user_name"],
             "user_email": source["user_email"],
             "type": source["type"],
@@ -141,10 +143,10 @@ class MusicService:
         return db_response.data
 
     @staticmethod
-    async def poll_and_store(task_id: str, conversion_id: str, project_id: str, conversion_type: str = "MUSIC_AI"):
+    async def poll_and_store(task_id: str, conversion_id: str, user_id: str, conversion_type: str = "MUSIC_AI"):
         logger.info(
-            "Polling started: task_id=%s conversion_id=%s conversion_type=%s",
-            task_id, conversion_id, conversion_type,
+            "Polling started: task_id=%s conversion_id=%s user_id=%s conversion_type=%s",
+            task_id, conversion_id, user_id, conversion_type,
         )
         headers = {"Authorization": MUSICGPT_API_KEY}
         params = {
@@ -199,7 +201,7 @@ class MusicService:
                         audio_response = await client.get(audio_url)
                         audio_response.raise_for_status()
 
-                        file_path = f"{project_id}/{task_id}/{conversion_id}.mp3"
+                        file_path = f"{user_id}/{task_id}/{conversion_id}.mp3"
                         supabase.storage.from_(BUCKET_NAME).upload(
                             file_path,
                             audio_response.content,

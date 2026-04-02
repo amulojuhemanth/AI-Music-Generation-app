@@ -45,7 +45,7 @@ All requests go to `POST /lyrics/generate`. Only `user_id`, `user_name`, and `pr
 
 ## Music Generation
 
-All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, `user_email`, `type`, and `prompt` are required.
+All requests go to `POST /music/generateMusic`. Only `project_id`, `user_id`, `user_name`, `user_email`, `type`, and `prompt` are required.
 
 ---
 
@@ -55,6 +55,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_001",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -69,6 +70,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_002",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -83,6 +85,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_003",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -97,6 +100,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_004",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -111,6 +115,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_005",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -129,6 +134,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_006",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -144,6 +150,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_007",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -159,6 +166,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_008",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -174,6 +182,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_009",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -189,6 +198,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_010",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -208,6 +218,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_011",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "vocal",
@@ -222,6 +233,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "proj_012",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "vocal",
@@ -235,6 +247,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "1",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Sohan",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -248,6 +261,7 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 ```json
 {
   "project_id": "1",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "user_name": "Jhon",
   "user_email": "sohan@example.com",
   "type": "music",
@@ -259,6 +273,141 @@ All requests go to `POST /music/generateMusic`. Only `project_id`, `user_name`, 
 }
 
 ```
+---
+
+---
+
+## Stem Separation
+
+All requests go to `POST /separate/` as `multipart/form-data`. Required fields: `file` (audio upload), `user_id`, `project_id`. Returns a job immediately with `status: PENDING`; processing runs in the background. Poll the `audio_separations` table by `id` to check progress.
+
+On completion, four stem URLs are populated: `vocals_url`, `drums_url`, `bass_url`, `other_url`.
+
+### cURL — Basic MP3 Separation
+```bash
+curl -X POST http://localhost:8000/separate/ \
+  -F "file=@/path/to/song.mp3" \
+  -F "user_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -F "project_id=proj_001"
+```
+
+### cURL — WAV File
+```bash
+curl -X POST http://localhost:8000/separate/ \
+  -F "file=@/path/to/track.wav" \
+  -F "user_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -F "project_id=proj_002"
+```
+
+### cURL — Different Project
+```bash
+curl -X POST http://localhost:8000/separate/ \
+  -F "file=@/path/to/beat.mp3" \
+  -F "user_id=b9c8d7e6-f5a4-3210-fedc-ba9876543210" \
+  -F "project_id=proj_remix_01"
+```
+
+### Expected Response (immediate)
+```json
+{
+  "id": "e3f1a2b4-7c89-4d56-a012-3e4f5a6b7c8d",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "project_id": "proj_001",
+  "original_filename": "song.mp3",
+  "status": "PENDING",
+  "vocals_url": null,
+  "drums_url": null,
+  "bass_url": null,
+  "other_url": null,
+  "error_message": null,
+  "created_at": "2026-03-29T10:00:00Z"
+}
+```
+
+### Expected Response (after completion)
+```json
+{
+  "id": "e3f1a2b4-7c89-4d56-a012-3e4f5a6b7c8d",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "project_id": "proj_001",
+  "original_filename": "song.mp3",
+  "status": "COMPLETED",
+  "vocals_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../proj_001/e3f1a2b4-.../vocals.wav",
+  "drums_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../proj_001/e3f1a2b4-.../drums.wav",
+  "bass_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../proj_001/e3f1a2b4-.../bass.wav",
+  "other_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../proj_001/e3f1a2b4-.../other.wav",
+  "error_message": null,
+  "created_at": "2026-03-29T10:00:00Z"
+}
+```
+
+---
+
+## Download Music Tracks
+
+Fetch both generated tracks for a given `task_id`. Sent as a `GET` request with query parameters.
+
+### cURL
+```bash
+curl -X GET "http://localhost:8000/download/?user_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890&task_id=task-xyz-123"
+```
+
+### Expected Response (tracks still processing)
+```json
+{
+  "task_id": "task-xyz-123",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "tracks": [
+    {
+      "conversion_id": "conv-abc-001",
+      "status": "IN_QUEUE",
+      "title": null,
+      "audio_url": null,
+      "duration": null,
+      "album_cover_path": null,
+      "generated_lyrics": null
+    },
+    {
+      "conversion_id": "conv-abc-002",
+      "status": "IN_QUEUE",
+      "title": null,
+      "audio_url": null,
+      "duration": null,
+      "album_cover_path": null,
+      "generated_lyrics": null
+    }
+  ]
+}
+```
+
+### Expected Response (tracks completed)
+```json
+{
+  "task_id": "task-xyz-123",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "tracks": [
+    {
+      "conversion_id": "conv-abc-001",
+      "status": "COMPLETED",
+      "title": "Chasing Dreams",
+      "audio_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../task-xyz-123/conv-abc-001.mp3",
+      "duration": 180.0,
+      "album_cover_path": "https://...",
+      "generated_lyrics": "Verse 1: ..."
+    },
+    {
+      "conversion_id": "conv-abc-002",
+      "status": "COMPLETED",
+      "title": "Chasing Dreams (Alt)",
+      "audio_url": "https://<supabase>/storage/v1/object/public/music-generated/a1b2c3d4-.../task-xyz-123/conv-abc-002.mp3",
+      "duration": 182.0,
+      "album_cover_path": "https://...",
+      "generated_lyrics": "Verse 1: ..."
+    }
+  ]
+}
+```
+
 ---
 
 ## Type Values Reference

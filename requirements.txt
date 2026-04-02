@@ -1,6 +1,9 @@
+demucs
 fastapi
-uvicorn[standard]
-supabase
-python-dotenv
+httpx
 pydantic
-pydantic-settings
+python-dotenv
+python-multipart
+supabase
+torchcodec
+uvicorn[standard]
