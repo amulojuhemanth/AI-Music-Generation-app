@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from routers import project_router, music_router, inpaint_router, lyrics_router, separation_router, download_router, prompt_router, extend_router
+from routers.sound_router import router as sound_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +19,7 @@ app.include_router(separation_router.router)
 app.include_router(download_router.router)
 app.include_router(prompt_router.router)
 app.include_router(extend_router.router)
+app.include_router(sound_router)
 
 @app.get("/")
 def read_root():

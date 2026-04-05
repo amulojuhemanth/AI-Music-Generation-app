@@ -119,7 +119,8 @@ AI-Music-Gen/
 │   ├── download_model.py     # DownloadTrack, DownloadResponse
 │   ├── prompt_model.py       # QuickIdeaCreate, PromptEnhanceCreate, PromptResponse
 │   ├── extend_model.py       # ExtendCreate
-│   └── remix_model.py        # RemixCreate
+│   ├── remix_model.py        # RemixCreate
+│   └── sound_model.py        # SoundCreate, SoundResponse
 ├── routers/
 │   ├── project_router.py     # POST /projects/, GET /projects/
 │   ├── music_router.py       # POST /music/generateMusic, POST /music/remix
@@ -127,12 +128,14 @@ AI-Music-Gen/
 │   ├── lyrics_router.py      # POST /lyrics/generate
 │   ├── separation_router.py  # POST /separate/
 │   ├── download_router.py    # GET /download/
-│   └── prompt_router.py      # POST /prompt/quick-idea, POST /prompt/enhance
+│   ├── prompt_router.py      # POST /prompt/quick-idea, POST /prompt/enhance
+│   └── sound_router.py       # POST /sound_generator/, GET /sound_generator/, GET /sound_generator/status
 └── services/
     ├── project_service.py    # Supabase CRUD for projects table
     ├── music_service.py      # MusicGPT API calls, polling, Supabase Storage upload
     ├── lyrics_service.py     # MusicGPT lyrics generation, Supabase insert
     ├── separation_service.py # Demucs stem separation, local cleanup, Supabase Storage upload
     ├── download_service.py   # Fetch both music tracks by user_id + task_id from music_metadata
-    └── prompt_service.py     # OpenRouter (DeepSeek) calls for quick idea + prompt enhancer
+    ├── prompt_service.py     # OpenRouter (DeepSeek) calls for quick idea + prompt enhancer
+    └── sound_service.py      # Sound generation, polling, and Supabase Storage upload
 ```
