@@ -252,27 +252,41 @@ class MusicService:
     async def fail_if_stale_queued(task_id: str, timeout_seconds: int = STALE_QUEUE_TIMEOUT_SECONDS) -> None:
         """
         Watchdog for queue starvation:
-        if a task is still QUEUED after timeout, mark it FAILED with a clear message.
+        Periodically checks if a task is still QUEUED. If it remains QUEUED for the entire timeout period,
+        marks it as FAILED. Exits early if the task status changes before the timeout.
         """
-        await asyncio.sleep(timeout_seconds)
-        resp = (
-            supabase.table("music_metadata")
-            .select("status")
-            .eq("task_id", task_id)
-            .execute()
-        )
-        rows = resp.data or []
-        if not rows:
-            return
+        check_interval = 10  # Check every 10 seconds
+        elapsed_time = 0
 
-        if all(row.get("status") == "QUEUED" for row in rows):
-            logger.warning(
-                "Watchdog marked task as FAILED due to stale QUEUED status: task_id=%s timeout=%ss",
-                task_id,
-                timeout_seconds,
+        while elapsed_time < timeout_seconds:
+            await asyncio.sleep(check_interval)
+            elapsed_time += check_interval
+
+            # Check the current status of the task
+            resp = (
+                supabase.table("music_metadata")
+                .select("status")
+                .eq("task_id", task_id)
+                .execute()
             )
-            MusicService.mark_task_failed(
-                task_id,
-                f"Task stuck in QUEUED for more than {timeout_seconds} seconds. "
-                "Worker may be offline or queue unavailable.",
-            )
+            rows = resp.data or []
+            if not rows:  # If no rows are found, exit immediately
+                logger.info("Task not found in database, exiting early: task_id=%s", task_id)
+                return
+
+            # Exit early if the task is no longer QUEUED
+            if any(row.get("status") != "QUEUED" for row in rows):
+                logger.info("Task status changed, exiting early: task_id=%s", task_id)
+                return
+
+        # If still QUEUED after the timeout, mark as FAILED
+        logger.warning(
+            "Watchdog marked task as FAILED due to stale QUEUED status: task_id=%s timeout=%ss",
+            task_id,
+            timeout_seconds,
+        )
+        MusicService.mark_task_failed(
+            task_id,
+            f"Task stuck in QUEUED for more than {timeout_seconds} seconds. "
+            "Worker may be offline or queue unavailable.",
+        )
